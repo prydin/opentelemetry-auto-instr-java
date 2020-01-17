@@ -28,3 +28,10 @@ Suggested plugins and settings:
 * [Lombok](https://plugins.jetbrains.com/plugin/6317-lombok-plugin)
 * [Save Actions](https://plugins.jetbrains.com/plugin/7642-save-actions)
   ![Recommended Settings](https://user-images.githubusercontent.com/734411/43430944-db84bf8a-94ae-11e8-8cec-0daa064937c4.png)
+  
+### Launching from within Intellij
+If you want to launch test cases from within IntelliJ, you may run into a compilation error that complains about a symbol called ```log``` not being defined. To resolve this, you need to turn on annotation processing in IntelliJ. This can be done as follows: 
+
+1. Make sure you have the Lombok plugin enabled.
+2. Navigate the the annotation processing settings: Preferences-> Build, Execution, Deployment -> Compiler -> Annotation Processors
+3. Make sure the "Enable Annotation Processing" checkbox is checked. 
