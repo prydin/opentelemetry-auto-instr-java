@@ -1,5 +1,5 @@
 plugins {
-  id "com.github.johnrengelman.shadow"
+  id "com.github.johnrengelman.shadow" version "5.2.0"
 }
 
 description = 'java-agent'
@@ -9,17 +9,43 @@ apply from: "${rootDir}/gradle/java.gradle"
 configurations {
   shadowInclude
 }
+/*
+ * Include subproject's shadowJar in the java-agent jar.
+ * Note jarname must not end with '.jar', or its classes will be on the classpath of
+ * the java-agent jar.
+ */
 
-processResources {
-  from(zipTree(project(':instrumentation').tasks.shadowJar.archiveFile)) {
-    into 'agent-tooling-and-instrumentation.isolated'
-    rename '(^.*)\\.class$', '$1.classdata'
-    // Rename LICENSE file since it clashes with license dir on non-case sensitive FSs (i.e. Mac)
-    rename '^LICENSE$', 'LICENSE.renamed'
+def includeShadowJar(subproject, jarname) {
+  def agent_project = project
+  subproject.afterEvaluate {
+    agent_project.processResources {
+      from(zipTree(subproject.tasks.shadowJar.archiveFile)) {
+        into jarname
+        rename '(^.*)\\.class$', '$1.classdata'
+        // Rename LICENSE file since it clashes with license dir on non-case sensitive FSs (i.e. Mac)
+        rename '^LICENSE$', 'LICENSE.renamed'
+      }
+    }
+
+    agent_project.processResources.dependsOn subproject.tasks.shadowJar
+    subproject.shadowJar {
+      mergeServiceFiles()
+
+      exclude '**/module-info.class'
+
+      dependencies {
+        exclude(dependency("org.projectlombok:lombok:$versions.lombok"))
+      }
+
+      // Prevents conflict with other SLF4J instances. Important for premain.
+      relocate 'org.slf4j', 'io.opentelemetry.auto.slf4j'
+      // rewrite dependencies calling Logger.getLogger
+      relocate 'java.util.logging.Logger', 'io.opentelemetry.auto.bootstrap.PatchLogger'
+    }
   }
-
-  dependsOn project(':instrumentation').tasks.shadowJar
 }
+
+includeShadowJar(project(':java-agent:instrumentation'), 'agent-tooling-and-instrumentation.isolated')
 
 jar {
   archiveClassifier = 'unbundled'
@@ -69,14 +95,14 @@ shadowJar {
 }
 
 dependencies {
-  testCompile project(':agent-bootstrap')
+  testCompile project(':java-agent:agent-bootstrap')
   testCompile project(':trace-api')
   testCompile project(':utils:gc-utils')
 
   testCompile deps.testLogging
   testCompile deps.guava
 
-  shadowInclude project(path: ':agent-bootstrap')
+  shadowInclude project(path: ':java-agent:agent-bootstrap')
 }
 
 tasks.withType(Test).configureEach {

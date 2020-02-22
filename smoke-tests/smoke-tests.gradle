@@ -4,7 +4,7 @@ description = 'smoke-tests'
 
 dependencies {
   compile deps.spock
-  compile project(':testing')
+  compile project(':java-agent:testing')
 }
 
 subprojects { subProject ->
